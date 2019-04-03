@@ -320,7 +320,7 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[0].texture);
 		background.render();
 
-		////set earthdasdasdas
+		////set earth
 		glUseProgram(model.shaderProgram);
 		////lighting uniforms
 		////get and set light colour and position uniform
