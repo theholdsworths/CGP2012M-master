@@ -44,6 +44,13 @@
 
 //***************
 //variables
+
+
+
+int WIND = 0;
+int altScreenWidth;
+int altScreenHeight;
+
 void Uniform_variables();
 SDL_Event event;
 SDL_Window *win;
@@ -66,6 +73,10 @@ float aspect;
 int left;
 int newwidth;
 int newheight;
+
+float PlayerX = 2.0f, PlayerY = 0.2f, PlayerZ = 1.0f, BulletX = 2.0f, BulletY;
+bool SpawnBullet = false;
+bool MoveRight = false, MoveLeft = false, MoveUp = false, MoveDown = false;
 
 //transform matrices
 glm::mat4 modelMatrix;
@@ -108,6 +119,10 @@ glm::vec3 lightCol;
 glm::vec3 lightPosition;
 glm::vec3 viewPosition;
 float ambientIntensity;
+
+glm::vec3 lightCol2;
+glm::vec3 lightPosition2;
+glm::vec3 viewPosition2;
 
 //**************
 //function prototypes
@@ -171,11 +186,11 @@ int main(int argc, char *argv[]) {
 	//*********************
 	//create texture collection
 	//create textures - space for 4, but only using 2
-	Texture texArray[68;
+	Texture texArray[8];
 	//background texture
 	texArray[0].load("..//..//Assets//Textures//space.png");
 	texArray[0].setBuffers();
-	texArray[1].load("..//..//Assets//Textures//bubbles.png");
+	texArray[1].load("..//..//Assets//Textures//bubble.png");
 	texArray[1].setBuffers();
 	texArray[2].load("..//..//Assets//Textures//bricks.png");
 	texArray[2].setBuffers();
@@ -206,10 +221,15 @@ int main(int argc, char *argv[]) {
 	int ambientIntensityLocation;
 	int modelColourLocation;
 	int modelAmbientLocation;
+
 	int lightColLocation;
 	int normalMatrixLocation;
 	int lightPositionLocation;
 	int viewPositionLocation;
+
+	int lightCol2Location;
+	int lightPosition2Location;
+	int viewPosition2Location;
 
 	GLuint currentTime = 0;
 	GLuint lastTime = 0;
@@ -218,16 +238,19 @@ int main(int argc, char *argv[]) {
 	//lighting for the model
 	//Light position setting
 	lightPosition = glm::vec3(1.0f, 0.0f, 0.5f);
+	lightPosition2 = glm::vec3(2.0f, 0.0f, 1.5f);
 	//light colour setting
 	// Candle:  r:1.0 g:0.57 b:0.16
 	// 100W bulb: r:1.0 g:0.84 b:0.66
 	// direct sunlight: r:1.0 g:1.0 b:0.98
-	glm::vec3 lightColour = glm::vec3(1.0f, 1.0f, 0.98f);
+	glm::vec3 lightColour = glm::vec3(1.0f, 0.57f, 0.16f);
+	glm::vec3 lightColour2 = glm::vec3(1.0f, 0.84f, 0.66f);
 
 	//light for the background
 	//light distance setting
 	ambientIntensity = 1.0f;
 	lightCol = glm::vec3(1.0f, 1.0f, 0.98f);
+	lightCol2 = glm::vec3(0.7f, 0.0f, 0.98f);
 
 	//initialise transform matrices 
 	//orthographic (2D) projection
@@ -254,31 +277,58 @@ int main(int argc, char *argv[]) {
 	LBorderScale = glm::mat4(1.0f);
 	LBorderRotate = glm::mat4(1.0f);
 	LBorderTranslate = glm::mat4(1.0f);
-
+	
 	//once only scale to background, and translate to centre
 	b_scaleFactor = { 80.0f, 70.0f, 1.0f };
 	backgroundScale = glm::scale(backgroundScale, glm::vec3(b_scaleFactor));
 	backgroundTranslate = glm::translate(backgroundTranslate, glm::vec3(0.0f, 0.0f, -10.0f));
 
 	//once only scale and translate to model
-	modelScale = glm::scale(modelScale, glm::vec3(0.3f, 0.3f, 0.3f));
+	modelScale = glm::scale(modelScale, glm::vec3(0.1f, 0.1f, 0.1f));
 	modelTranslate = glm::translate(modelTranslate, glm::vec3(0.0f, 0.0f, -1.0f));
 
-	EarthScale = glm::scale(EarthScale, glm::vec3(0.05f, 0.05f, 0.05f));
-	EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.0f, 2.0f, 2.0f));
+	EarthScale = glm::scale(EarthScale, glm::vec3(0.4f, 0.05f, 0.05f));
+	EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.0f, -0.45f, 2.0f));
 
 	RBorderScale = glm::scale(RBorderScale, glm::vec3(0.1f, 1.7f, 4.7f));
 	RBorderTranslate = glm::translate(RBorderTranslate, glm::vec3(4.0f, 0.0f, -4.7f));
 
 	LBorderScale = glm::scale(LBorderScale, glm::vec3(0.1f, 1.7f, 4.7f));
-	LBorderTranslate = glm::translate(LBorderTranslate, glm::vec3(-4.0, 0.0f, -4.7));
+	LBorderTranslate = glm::translate(LBorderTranslate, glm::vec3(-3.0, 0.0f, -4.7));
 
 	errorLabel = 4;
+
+	SDL_GetWindowSize(win, &altScreenWidth, &altScreenHeight);
+	int width, height;
+	SDL_GetWindowSize(win, &width, &height);
 
 	//*****************************
 	//'game' loop
 	while (windowOpen)
 	{
+
+		if (MoveRight == true)
+		{
+			if (PlayerX <= 3.45f)
+			{
+				//PlayerX += 0.5f;
+				//viewMatrix = glm::translate(viewMatrix, glm::vec3(-PlayerX / 125, 0.0f, 0.0f));
+				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
+			}
+			else
+				MoveRight = false;
+		}
+
+		if (MoveLeft == true)
+		{
+			if (PlayerX >= 0.35f)
+			{
+				PlayerX -= 0.5f;
+				viewMatrix = glm::translate(viewMatrix, glm::vec3(PlayerX / 125, 0.0f, 0.0f));
+			}
+			else
+				MoveLeft = false;
+		}
 		//*************************
 		//****************************
 		// OpenGL calls.
@@ -322,26 +372,27 @@ int main(int argc, char *argv[]) {
 
 		////set earth
 		glUseProgram(model.shaderProgram);
-		////lighting uniforms
-		////get and set light colour and position uniform
-		lightColLocation = glGetUniformLocation(model.shaderProgram, "lightCol");
+		//lighting uniforms
+		//get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
 		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
-		lightPositionLocation = glGetUniformLocation(model.shaderProgram, "lightPosition");
+		lightPositionLocation = glGetUniformLocation(model.shaderProgram, "lightPos");
 		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
-		////rotation
-		modelRotate = glm::rotate(modelRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
-		earthModelLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
-		glUniformMatrix4fv(earthModelLocation, 1, GL_FALSE, glm::value_ptr(EarthTranslate*EarthRotate*EarthScale));
-		earthViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
-		glUniformMatrix4fv(earthViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-		earthProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
-		glUniformMatrix4fv(cubeProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-		////set the normal matrix to send to the vertex shader
-		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(cubeTranslate*cubeRotate*cubeScale));
-		////set the normalMatrix in the shaders
+		//rotation
+		//EarthRotate = glm::rotate(EarthRotate, (float)elapsedTime / 2000, glm::vec3(0.0f, 1.0f, 0.0f));
+		importModelLocation = glGetUniformLocation(model.shaderProgram, "uModel");
+		glUniformMatrix4fv(importModelLocation, 1, GL_FALSE, glm::value_ptr(EarthTranslate*EarthRotate*EarthScale));
+		importViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(importViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		importProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(importProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//set the normal matrix to send to the vertex shader, Light calculations take place in model-view space, So we calculate the normal matrix in that space
+		normalMatrix = glm::transpose(glm::inverse(EarthTranslate*EarthRotate*EarthScale * viewMatrix));
+		//set the normalMatrix in the shaders
+		glUseProgram(model.shaderProgram);
 		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
 		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
-		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		glBindTexture(GL_TEXTURE_2D, texArray[3].texture);
 		cube.render();
 
 		borderModeLocation, borderViewLocation, borderProjectionLocation;
@@ -418,6 +469,9 @@ int main(int argc, char *argv[]) {
 		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
 		glBindTexture(GL_TEXTURE_2D, texArray[1].texture);
 		model.render();
+
+
+		
 
 		//set to wireframe so we can see the circles
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -521,17 +575,43 @@ void handleInput()
 			case SDLK_b:
 				lightPosition.x += 0.1f;
 				break;
-			case SDLK_w:
-				cubeTranslate = glm::translate(cubeTranslate, glm::vec3(0.0f, 0.05f, 0.0f)); //(X, Y, Z)
-				break;
 			case SDLK_a:
-				cubeTranslate = glm::translate(cubeTranslate, glm::vec3(-0.05f, 0.0f, 0.0f)); //(X, Y, Z)
-				break;
-			case SDLK_s:
-				cubeTranslate = glm::translate(cubeTranslate, glm::vec3(0.f, -0.05f, 0.0f)); //(X, Y, Z)
+				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(-0.05f, 0.0f, 0.0f)); //(X, Y, Z)
 				break;
 			case SDLK_d:
-				cubeTranslate = glm::translate(cubeTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
+				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
+				break;
+			case SDLK_t:
+				if (WIND == 0)
+				{
+					WIND = 1;
+					SDL_SetWindowFullScreen(win, SDL_WINDOW_FULLSCREEN_DESKTOP);
+					WIND = 1;
+					break;
+				}
+				else
+				{
+					SDL_SetWindowFullscreen(win, 0);
+					WIND = 0;
+					break;
+				}
+				break;
+			}
+			if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED)
+			{
+				SDL_GetWindowSize(win, &altScreenWidth, &altScreenHeight);
+				glViewport(0, 0, altScreenWidth, altScreenHeight);
+			}
+		}
+
+		if (event.type == SDL_KEYUP)
+		{
+			switch (event.key.keysym.sym)
+			{
+			case SDLK_d:
+				MoveRight = false;
+				break;
+			default:
 				break;
 			}
 		}

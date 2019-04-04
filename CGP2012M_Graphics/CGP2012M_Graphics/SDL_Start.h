@@ -4,6 +4,8 @@
 class SDL_Start
 {
 public:
+	const int ScreenWidth = 1200;
+	const int ScreenHeight = 800;
 	SDL_Window *win;
 	SDL_GLContext glcontext;
 
@@ -13,7 +15,7 @@ public:
 		SDL_Init(SDL_INIT_EVERYTHING);
 
 		//SDL create window
-		win = SDL_CreateWindow("Scott Holdsworth - 14533160, Graphics - CGP2012M", 100, 100, 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		win = SDL_CreateWindow("Scott Holdsworth - 14533160, Graphics - CGP2012M", 100, 100, ScreenWidth, ScreenHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 
 		//set context attributes
 		//sets opengl version to 4.3

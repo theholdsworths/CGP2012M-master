@@ -23,6 +23,7 @@
     <ClInclude Include="Circle.h" />
     <ClInclude Include="CircleTexture.h" />
     <ClInclude Include="Cube.h" />
+    <ClInclude Include="Cubemap.h" />
     <ClInclude Include="GLerror.h" />
     <ClInclude Include="Model.h" />
     <ClInclude Include="ModelLoaderClass.h" />
