@@ -322,9 +322,9 @@ int main(int argc, char *argv[]) {
 	Block2Translate = glm::translate(Block2Translate, glm::vec3(0.0f, .5f, 2.0f));
 	Block3Translate = glm::translate(Block3Translate, glm::vec3(0.5, .5f, 2.0f));
 
-	Block4Translate = glm::translate(Block3Translate, glm::vec3(-.5, .0f, 2.0f));
-	Block5Translate = glm::translate(Block3Translate, glm::vec3(0.0, .0f, 2.0f));
-	Block6Translate = glm::translate(Block3Translate, glm::vec3(0.5, .0f, 2.0f));
+	Block4Translate = glm::translate(Block3Translate, glm::vec3(-.5, -.2f, .0f));
+	Block5Translate = glm::translate(Block3Translate, glm::vec3(0.0, -.2f, .0f));
+	Block6Translate = glm::translate(Block3Translate, glm::vec3(-1., -.2f, .0f));
 
 	errorLabel = 4;
 
@@ -468,7 +468,7 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
 		cube.render();
 
-		//set block
+		//BLOCK 1
 		glUseProgram(cube.shaderProgram);
 		////lighting uniforms get and set light colour and position uniform
 		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
@@ -490,7 +490,7 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
 		cube.render();
 		
-		//set block
+		//BLOCK 2
 		glUseProgram(cube.shaderProgram);
 		////lighting uniforms get and set light colour and position uniform
 		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
@@ -512,7 +512,7 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
 		cube.render();
 
-		//set block
+		//BLOCK 3
 		glUseProgram(cube.shaderProgram);
 		////lighting uniforms get and set light colour and position uniform
 		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
@@ -534,7 +534,7 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
 		cube.render();
 
-		//set block
+		//BLOCK 4
 		glUseProgram(cube.shaderProgram);
 		////lighting uniforms get and set light colour and position uniform
 		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
@@ -556,7 +556,7 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
 		cube.render();
 
-		//BLOCK 4
+		//BLOCK 5
 		glUseProgram(cube.shaderProgram);
 		////lighting uniforms get and set light colour and position uniform
 		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
@@ -572,6 +572,28 @@ int main(int argc, char *argv[]) {
 		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 		//set the normal matrix to send to the vertex shader
 		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(Block5Translate*BlockRotate*BlockScale));
+		//set the normalMatrix in the shaders
+		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
+		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		cube.render();
+
+		//BLOCK 6
+		glUseProgram(cube.shaderProgram);
+		////lighting uniforms get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
+		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+		lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
+		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+		//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		blockModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		glUniformMatrix4fv(blockModeLocation, 1, GL_FALSE, glm::value_ptr(Block6Translate*BlockRotate*BlockScale));
+		blockViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(blockViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		blockProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//set the normal matrix to send to the vertex shader
+		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(Block6Translate*BlockRotate*BlockScale));
 		//set the normalMatrix in the shaders
 		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
 		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
@@ -605,6 +627,17 @@ int main(int argc, char *argv[]) {
 		
 		if (SpawnBullet == true)
 		{
+			while (SpawnBullet == true)
+			{
+				BulletY += 0.05f;
+				if (BulletY >= 20.5f)
+				{
+					SpawnBullet = false;
+					BulletY = PlayerY;
+					break;
+				}
+				break;
+			}
 			////set .obj model
 			glUseProgram(model.shaderProgram);
 			//lighting uniforms
@@ -632,17 +665,7 @@ int main(int argc, char *argv[]) {
 			glBindTexture(GL_TEXTURE_2D, texArray[1].texture);
 			model.render();
 
-			while (SpawnBullet == true)
-			{
-				BulletY += 0.05f;
-				if (BulletY >= 20.5f)
-				{
-					SpawnBullet = false;
-					BulletY = PlayerY;
-					break;
-				}
-				break;
-			}
+			
 		}
 
 		//set to wireframe so we can see the circles
@@ -748,14 +771,14 @@ void handleInput()
 				lightPosition.x += 0.1f;
 				break;
 			case SDLK_a:
-				MoveLeft = true;
-				//modelTranslate = glm::translate(modelTranslate, glm::vec3(-0.05f, 0.0f, 0.0f));
-				//EarthTranslate = glm::translate(EarthTranslate, glm::vec3(-0.05f, 0.0f, 0.0f)); //(X, Y, Z)
+				//MoveLeft = true;
+				modelTranslate = glm::translate(modelTranslate, glm::vec3(-0.05f, 0.0f, 0.0f));
+				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(-0.05f, 0.0f, 0.0f)); //(X, Y, Z)
 				break;
 			case SDLK_d:
-				MoveRight = true;
-				//modelTranslate = glm::translate(modelTranslate, glm::vec3(0.05f, 0.0f, 0.0f));
-				//EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
+				//MoveRight = true;
+				modelTranslate = glm::translate(modelTranslate, glm::vec3(0.05f, 0.0f, 0.0f));
+				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
 				break;
 			case SDLK_1:
 				projectionMatrix = glm::ortho(-3.0f, 4.0f, -4.0f, 2.0f, -60.0f, 100.0f);
