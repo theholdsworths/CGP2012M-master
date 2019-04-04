@@ -44,18 +44,16 @@
 
 //***************
 //variables
-
-
-
-int WIND = 0;
-int altScreenWidth;
-int altScreenHeight;
-
 void Uniform_variables();
 SDL_Event event;
 SDL_Window *win;
 bool windowOpen = true;
 bool isFullScreen = false;
+
+bool SpawnBullet = false;
+bool shot[10];
+
+float PlayerX = 0.f, PlayerY = -0.45f, PlayerZ = 2.0f, BulletX = 2.0f, BulletY = 0.2f;
 float bubbleSpeed = -0.001f;
 float radius;
 //screen boundaries for collision tests
@@ -74,9 +72,7 @@ int left;
 int newwidth;
 int newheight;
 
-float PlayerX = 2.0f, PlayerY = 0.2f, PlayerZ = 1.0f, BulletX = 2.0f, BulletY;
-bool SpawnBullet = false;
-bool MoveRight = false, MoveLeft = false, MoveUp = false, MoveDown = false;
+bool MoveRight = false, MoveLeft = false;
 
 //transform matrices
 glm::mat4 modelMatrix;
@@ -105,6 +101,16 @@ glm::mat4 RBorderTranslate;
 glm::mat4 LBorderRotate;
 glm::mat4 LBorderScale;
 glm::mat4 LBorderTranslate;
+//block
+glm::mat4 BlockRotate;
+glm::mat4 BlockScale;
+glm::mat4 BlockTranslate;
+
+glm::mat4 Block2Translate;
+glm::mat4 Block3Translate;
+glm::mat4 Block4Translate;
+glm::mat4 Block5Translate;
+glm::mat4 Block6Translate;
 float angle = 0;
 
 //create camera
@@ -176,6 +182,7 @@ int main(int argc, char *argv[]) {
 	//could make this better by specifying the texture in this model header
 	Model model;
 	Model cube;
+	Model blocks[10];
 	//create model loader
 	ModelImport modelLoader; 
 	modelLoader.LoadOBJ2("..//..//Assets//Models//blenderSphere.obj", model.vertices, model.texCoords, model.normals, model.indices);
@@ -215,6 +222,7 @@ int main(int argc, char *argv[]) {
 	int importModelLocation, importViewLocation, importProjectionLocation;
 	int earthModelLocation, earthViewLocation, earthProjectionLocation;
 	int borderModeLocation, borderViewLocation, borderProjectionLocation;
+	int blockModeLocation, blockViewLocation, blockProjectionLocation;
 	
 	
 	int backgroundColourLocation;
@@ -243,7 +251,7 @@ int main(int argc, char *argv[]) {
 	// Candle:  r:1.0 g:0.57 b:0.16
 	// 100W bulb: r:1.0 g:0.84 b:0.66
 	// direct sunlight: r:1.0 g:1.0 b:0.98
-	glm::vec3 lightColour = glm::vec3(1.0f, 0.57f, 0.16f);
+	glm::vec3 lightColour = glm::vec3(1.0f, 1.f, 0.95f);
 	glm::vec3 lightColour2 = glm::vec3(1.0f, 0.84f, 0.66f);
 
 	//light for the background
@@ -259,6 +267,9 @@ int main(int argc, char *argv[]) {
 	projectionMatrix = glm::perspective(glm::radians(45.0f), (float)w / (float)h, 0.1f, 100.0f);
 	//initialise view matrix to '1'
 	viewMatrix = glm::mat4(1.0f);
+
+	/*for (int i = 0; i < 10; i++)
+		blocks[i].setBuffers();*/
 
 	backgroundScale = glm::mat4(1.0f);
 	backgroundTranslate = glm::mat4(1.0f);
@@ -277,18 +288,28 @@ int main(int argc, char *argv[]) {
 	LBorderScale = glm::mat4(1.0f);
 	LBorderRotate = glm::mat4(1.0f);
 	LBorderTranslate = glm::mat4(1.0f);
-	
+	//block
+	BlockScale = glm::mat4(1.0f);
+	BlockRotate = glm::mat4(1.0f);
+	BlockTranslate = glm::mat4(1.0f);
+
+	Block2Translate = glm::mat4(1.0f);
+	Block3Translate = glm::mat4(1.0f);
+	Block4Translate = glm::mat4(1.0f);
+	Block5Translate = glm::mat4(1.0f);
+	Block6Translate = glm::mat4(1.0f);
+
 	//once only scale to background, and translate to centre
 	b_scaleFactor = { 80.0f, 70.0f, 1.0f };
 	backgroundScale = glm::scale(backgroundScale, glm::vec3(b_scaleFactor));
 	backgroundTranslate = glm::translate(backgroundTranslate, glm::vec3(0.0f, 0.0f, -10.0f));
 
 	//once only scale and translate to model
-	modelScale = glm::scale(modelScale, glm::vec3(0.1f, 0.1f, 0.1f));
-	modelTranslate = glm::translate(modelTranslate, glm::vec3(0.0f, 0.0f, -1.0f));
+	modelScale = glm::scale(modelScale, glm::vec3(0.07f, 0.07f, 0.07f));
+	modelTranslate = glm::translate(modelTranslate, glm::vec3(0.0f, -0.3f, 2.0f));
 
 	EarthScale = glm::scale(EarthScale, glm::vec3(0.4f, 0.05f, 0.05f));
-	EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.0f, -0.45f, 2.0f));
+	EarthTranslate = glm::translate(EarthTranslate, glm::vec3(PlayerX, PlayerY, PlayerZ));
 
 	RBorderScale = glm::scale(RBorderScale, glm::vec3(0.1f, 1.7f, 4.7f));
 	RBorderTranslate = glm::translate(RBorderTranslate, glm::vec3(4.0f, 0.0f, -4.7f));
@@ -296,11 +317,16 @@ int main(int argc, char *argv[]) {
 	LBorderScale = glm::scale(LBorderScale, glm::vec3(0.1f, 1.7f, 4.7f));
 	LBorderTranslate = glm::translate(LBorderTranslate, glm::vec3(-3.0, 0.0f, -4.7));
 
-	errorLabel = 4;
+	BlockScale = glm::scale(BlockScale, glm::vec3(0.2f, 0.07f, 0.07f));
+	BlockTranslate = glm::translate(BlockTranslate, glm::vec3(-.5f, .5f, 2.0f));	
+	Block2Translate = glm::translate(Block2Translate, glm::vec3(0.0f, .5f, 2.0f));
+	Block3Translate = glm::translate(Block3Translate, glm::vec3(0.5, .5f, 2.0f));
 
-	SDL_GetWindowSize(win, &altScreenWidth, &altScreenHeight);
-	int width, height;
-	SDL_GetWindowSize(win, &width, &height);
+	Block4Translate = glm::translate(Block3Translate, glm::vec3(-.5, .0f, 2.0f));
+	Block5Translate = glm::translate(Block3Translate, glm::vec3(0.0, .0f, 2.0f));
+	Block6Translate = glm::translate(Block3Translate, glm::vec3(0.5, .0f, 2.0f));
+
+	errorLabel = 4;
 
 	//*****************************
 	//'game' loop
@@ -309,25 +335,25 @@ int main(int argc, char *argv[]) {
 
 		if (MoveRight == true)
 		{
-			if (PlayerX <= 3.45f)
+			if (PlayerX <= 10.f)
 			{
-				//PlayerX += 0.5f;
-				//viewMatrix = glm::translate(viewMatrix, glm::vec3(-PlayerX / 125, 0.0f, 0.0f));
-				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
+				PlayerX += 0.05f;
 			}
 			else
+			{
 				MoveRight = false;
+			}
 		}
-
 		if (MoveLeft == true)
 		{
-			if (PlayerX >= 0.35f)
+			if (PlayerX-= -10.35f)
 			{
-				PlayerX -= 0.5f;
-				viewMatrix = glm::translate(viewMatrix, glm::vec3(PlayerX / 125, 0.0f, 0.0f));
+				PlayerX -= 0.05f;
 			}
 			else
+			{
 				MoveLeft = false;
+			}
 		}
 		//*************************
 		//****************************
@@ -442,36 +468,182 @@ int main(int argc, char *argv[]) {
 		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
 		cube.render();
 
-
-		////set .obj model
-		glUseProgram(model.shaderProgram);
-		//lighting uniforms
-		//get and set light colour and position uniform
-		lightColLocation = glGetUniformLocation(model.shaderProgram, "lightCol");
+		//set block
+		glUseProgram(cube.shaderProgram);
+		////lighting uniforms get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
 		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
-		lightPositionLocation = glGetUniformLocation(model.shaderProgram, "lightPos");
+		lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
 		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
-		//rotation
-		modelRotate = glm::rotate(modelRotate, (float)elapsedTime / 2000, glm::vec3(0.0f, 1.0f, 0.0f));
-		importModelLocation = glGetUniformLocation(model.shaderProgram, "uModel");
-		glUniformMatrix4fv(importModelLocation, 1, GL_FALSE, glm::value_ptr(modelTranslate*modelRotate*modelScale));
-		importViewLocation = glGetUniformLocation(model.shaderProgram, "uView");
-		glUniformMatrix4fv(importViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
-		importProjectionLocation = glGetUniformLocation(model.shaderProgram, "uProjection");
-		glUniformMatrix4fv(importProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		blockModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		glUniformMatrix4fv(blockModeLocation, 1, GL_FALSE, glm::value_ptr(BlockTranslate*BlockRotate*BlockScale));
+		blockViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(blockViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		blockProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 		//set the normal matrix to send to the vertex shader
-		//Light calculations take place in model-view space
-		//So we calculate the normal matrix in that space
-		normalMatrix = glm::transpose(glm::inverse(modelTranslate*modelRotate*modelScale * viewMatrix));
+		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(BlockTranslate*BlockRotate*BlockScale));
 		//set the normalMatrix in the shaders
-		glUseProgram(model.shaderProgram);
-		normalMatrixLocation = glGetUniformLocation(model.shaderProgram, "uNormalMatrix");
+		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
 		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
-		glBindTexture(GL_TEXTURE_2D, texArray[1].texture);
-		model.render();
-
-
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		cube.render();
 		
+		//set block
+		glUseProgram(cube.shaderProgram);
+		////lighting uniforms get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
+		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+		lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
+		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+		//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		blockModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		glUniformMatrix4fv(blockModeLocation, 1, GL_FALSE, glm::value_ptr(Block2Translate*BlockRotate*BlockScale));
+		blockViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(blockViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		blockProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//set the normal matrix to send to the vertex shader
+		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(Block2Translate*BlockRotate*BlockScale));
+		//set the normalMatrix in the shaders
+		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
+		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		cube.render();
+
+		//set block
+		glUseProgram(cube.shaderProgram);
+		////lighting uniforms get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
+		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+		lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
+		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+		//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		blockModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		glUniformMatrix4fv(blockModeLocation, 1, GL_FALSE, glm::value_ptr(Block3Translate*BlockRotate*BlockScale));
+		blockViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(blockViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		blockProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//set the normal matrix to send to the vertex shader
+		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(Block3Translate*BlockRotate*BlockScale));
+		//set the normalMatrix in the shaders
+		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
+		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		cube.render();
+
+		//set block
+		glUseProgram(cube.shaderProgram);
+		////lighting uniforms get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
+		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+		lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
+		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+		//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		blockModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		glUniformMatrix4fv(blockModeLocation, 1, GL_FALSE, glm::value_ptr(Block4Translate*BlockRotate*BlockScale));
+		blockViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(blockViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		blockProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//set the normal matrix to send to the vertex shader
+		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(Block4Translate*BlockRotate*BlockScale));
+		//set the normalMatrix in the shaders
+		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
+		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		cube.render();
+
+		//BLOCK 4
+		glUseProgram(cube.shaderProgram);
+		////lighting uniforms get and set light colour and position uniform
+		lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
+		glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+		lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
+		glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+		//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		blockModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		glUniformMatrix4fv(blockModeLocation, 1, GL_FALSE, glm::value_ptr(Block5Translate*BlockRotate*BlockScale));
+		blockViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		glUniformMatrix4fv(blockViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		blockProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		glUniformMatrix4fv(blockProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//set the normal matrix to send to the vertex shader
+		normalMatrix = (glm::mat3)glm::transpose(glm::inverse(Block5Translate*BlockRotate*BlockScale));
+		//set the normalMatrix in the shaders
+		normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
+		glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		cube.render();
+		//for (int x = 0; x < 10; x++)
+		//{
+		//	//set border
+		//	glUseProgram(cube.shaderProgram);
+		//	////lighting uniforms get and set light colour and position uniform
+		//	lightColLocation = glGetUniformLocation(cube.shaderProgram, "lightCol");
+		//	glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+		//	lightPositionLocation = glGetUniformLocation(cube.shaderProgram, "lightPosition");
+		//	glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+		//	//rotation // cubeRotate = glm::rotate(cubeRotate, (float)elapsedTime / 1000, glm::vec3(1.0f, 1.0f, 0.0f));
+		//	borderModeLocation = glGetUniformLocation(cube.shaderProgram, "uModel");
+		//	glUniformMatrix4fv(borderModeLocation, 1, GL_FALSE, glm::value_ptr(LBorderTranslate*LBorderRotate*LBorderScale));
+		//	borderViewLocation = glGetUniformLocation(cube.shaderProgram, "uView");
+		//	glUniformMatrix4fv(borderViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		//	borderProjectionLocation = glGetUniformLocation(cube.shaderProgram, "uProjection");
+		//	glUniformMatrix4fv(borderProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		//	//set the normal matrix to send to the vertex shader
+		//	normalMatrix = (glm::mat3)glm::transpose(glm::inverse(LBorderTranslate*LBorderRotate*LBorderScale));
+		//	//set the normalMatrix in the shaders
+		//	normalMatrixLocation = glGetUniformLocation(cube.shaderProgram, "uNormalMatrix");
+		//	glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+		//	glBindTexture(GL_TEXTURE_2D, texArray[2].texture);
+		//	cube.render();
+
+		//}
+		
+		if (SpawnBullet == true)
+		{
+			////set .obj model
+			glUseProgram(model.shaderProgram);
+			//lighting uniforms
+			//get and set light colour and position uniform
+			lightColLocation = glGetUniformLocation(model.shaderProgram, "lightCol");
+			glUniform3fv(lightColLocation, 1, glm::value_ptr(lightColour));
+			lightPositionLocation = glGetUniformLocation(model.shaderProgram, "lightPos");
+			glUniform3fv(lightPositionLocation, 1, glm::value_ptr(lightPosition));
+			//rotation
+			modelRotate = glm::rotate(modelRotate, (float)elapsedTime / 2000, glm::vec3(0.0f, 1.0f, 0.0f));
+			importModelLocation = glGetUniformLocation(model.shaderProgram, "uModel");
+			glUniformMatrix4fv(importModelLocation, 1, GL_FALSE, glm::value_ptr(modelTranslate*modelRotate*modelScale));
+			importViewLocation = glGetUniformLocation(model.shaderProgram, "uView");
+			glUniformMatrix4fv(importViewLocation, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+			importProjectionLocation = glGetUniformLocation(model.shaderProgram, "uProjection");
+			glUniformMatrix4fv(importProjectionLocation, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+			//set the normal matrix to send to the vertex shader
+			//Light calculations take place in model-view space
+			//So we calculate the normal matrix in that space
+			normalMatrix = glm::transpose(glm::inverse(modelTranslate*modelRotate*modelScale * viewMatrix));
+			//set the normalMatrix in the shaders
+			glUseProgram(model.shaderProgram);
+			normalMatrixLocation = glGetUniformLocation(model.shaderProgram, "uNormalMatrix");
+			glUniformMatrix4fv(normalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+			glBindTexture(GL_TEXTURE_2D, texArray[1].texture);
+			model.render();
+
+			while (SpawnBullet == true)
+			{
+				BulletY += 0.05f;
+				if (BulletY >= 20.5f)
+				{
+					SpawnBullet = false;
+					BulletY = PlayerY;
+					break;
+				}
+				break;
+			}
+		}
 
 		//set to wireframe so we can see the circles
 		//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -576,31 +748,27 @@ void handleInput()
 				lightPosition.x += 0.1f;
 				break;
 			case SDLK_a:
-				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(-0.05f, 0.0f, 0.0f)); //(X, Y, Z)
+				MoveLeft = true;
+				//modelTranslate = glm::translate(modelTranslate, glm::vec3(-0.05f, 0.0f, 0.0f));
+				//EarthTranslate = glm::translate(EarthTranslate, glm::vec3(-0.05f, 0.0f, 0.0f)); //(X, Y, Z)
 				break;
 			case SDLK_d:
-				EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
+				MoveRight = true;
+				//modelTranslate = glm::translate(modelTranslate, glm::vec3(0.05f, 0.0f, 0.0f));
+				//EarthTranslate = glm::translate(EarthTranslate, glm::vec3(0.05f, 0.f, 0.0f)); //(X, Y, Z)
 				break;
-			case SDLK_t:
-				if (WIND == 0)
-				{
-					WIND = 1;
-					SDL_SetWindowFullScreen(win, SDL_WINDOW_FULLSCREEN_DESKTOP);
-					WIND = 1;
-					break;
-				}
-				else
-				{
-					SDL_SetWindowFullscreen(win, 0);
-					WIND = 0;
-					break;
-				}
+			case SDLK_1:
+				projectionMatrix = glm::ortho(-3.0f, 4.0f, -4.0f, 2.0f, -60.0f, 100.0f);
 				break;
-			}
-			if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED)
-			{
-				SDL_GetWindowSize(win, &altScreenWidth, &altScreenHeight);
-				glViewport(0, 0, altScreenWidth, altScreenHeight);
+			case SDLK_0:
+				projectionMatrix = glm::perspective(glm::radians(45.0f), (float)w / (float)h, 0.1f, 100.0f);
+				break;
+			case SDLK_2:
+				//viewMatrix = glm::lookAt(glm::vec3(cam.camXPos, cam.camYPos, cam.camZPos));
+				break;
+			case SDLK_SPACE:
+				SpawnBullet = true;
+				break;
 			}
 		}
 
@@ -608,6 +776,9 @@ void handleInput()
 		{
 			switch (event.key.keysym.sym)
 			{
+			case SDLK_a:
+				MoveLeft = false;
+				break;
 			case SDLK_d:
 				MoveRight = false;
 				break;
